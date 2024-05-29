@@ -34,8 +34,15 @@ type Notifier struct {
 }
 
 type slackRequest struct {
-	Channel string `json:"channel"`
-	Text    string `json:"text"`
+	Channel     string       `json:"channel"`
+	Attachments []attachment `json:"attachments"`
+}
+
+type attachment struct {
+	Title  string `json:"title,omitempty"`
+	Text   string `json:"text,omitempty"`
+	Footer string `json:"footer,omitempty"`
+	Color  string `json:"color,omitempty"`
 }
 
 type slackResponse struct {
@@ -57,6 +64,11 @@ func NewSlackNotifier(logger log.Logger, receiver internal.Receiver, notifierCtl
 		tmplName = opts.Global.Template
 	}
 
+	var (
+		titleTmplName string
+		colorTmplName string
+	)
+
 	if opts != nil && opts.Slack != nil {
 
 		if opts.Slack.NotificationTimeout != nil {
@@ -65,6 +77,14 @@ func NewSlackNotifier(logger log.Logger, receiver internal.Receiver, notifierCtl
 
 		if !utils.StringIsNil(opts.Slack.Template) {
 			tmplName = opts.Slack.Template
+		}
+
+		if !utils.StringIsNil(opts.Slack.TitleTemplate) {
+			titleTmplName = opts.Slack.TitleTemplate
+		}
+
+		if !utils.StringIsNil(opts.Slack.ColorTemplate) {
+			colorTmplName = opts.Slack.ColorTemplate
 		}
 	}
 
@@ -76,6 +96,14 @@ func NewSlackNotifier(logger log.Logger, receiver internal.Receiver, notifierCtl
 
 	if utils.StringIsNil(n.receiver.TmplName) {
 		n.receiver.TmplName = tmplName
+	}
+
+	if utils.StringIsNil(n.receiver.TitleTmplName) && !utils.StringIsNil(titleTmplName) {
+		n.receiver.TitleTmplName = titleTmplName
+	}
+
+	if utils.StringIsNil(n.receiver.ColorTmplName) && !utils.StringIsNil(colorTmplName) {
+		n.receiver.ColorTmplName = colorTmplName
 	}
 
 	var err error
@@ -100,6 +128,25 @@ func (n *Notifier) Notify(ctx context.Context, data *template.Data) error {
 		return err
 	}
 
+	var titleMsg string
+	if !utils.StringIsNil(n.receiver.TitleTmplName) {
+		titleMsg, err = n.tmpl.Text(n.receiver.TitleTmplName, data)
+		if err != nil {
+			_ = level.Error(n.logger).Log("msg", "SlackNotifier: generate title message error", "error", err.Error())
+			return err
+		}
+
+	}
+
+	var colorFmt string
+	if !utils.StringIsNil(n.receiver.ColorTmplName) {
+		colorFmt, err = n.tmpl.Text(n.receiver.ColorTmplName, data)
+		if err != nil {
+			_ = level.Error(n.logger).Log("msg", "SlackNotifier: generate color format error", "error", err.Error())
+			return err
+		}
+	}
+
 	token, err := n.notifierCtl.GetCredential(n.receiver.Token)
 	if err != nil {
 		_ = level.Error(n.logger).Log("msg", "SlackNotifier: get token secret", "error", err.Error())
@@ -113,9 +160,15 @@ func (n *Notifier) Notify(ctx context.Context, data *template.Data) error {
 			_ = level.Debug(n.logger).Log("msg", "SlackNotifier: send message", "channel", channel, "used", time.Since(start).String())
 		}()
 
+		att := &attachment{
+			Text:  msg,
+			Title: titleMsg,
+			Color: colorFmt,
+		}
+
 		sr := &slackRequest{
-			Channel: channel,
-			Text:    msg,
+			Channel:     channel,
+			Attachments: []attachment{*att},
 		}
 
 		var buf bytes.Buffer

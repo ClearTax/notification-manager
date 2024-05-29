@@ -97,6 +97,10 @@ type SlackReceiver struct {
 	// The name of the template to generate notification.
 	// If the global template is not set, it will use default.
 	Template *string `json:"template,omitempty"`
+	// The name of the template to generate slack title.
+	TitleTemplate *string `json:"titleTemplate,omitempty"`
+	// The name of the template to set the color in slack message.
+	ColorTemplate *string `json:"colorTemplate,omitempty"`
 	// Template file.
 	TmplText *ConfigmapKeySelector `json:"tmplText,omitempty"`
 }

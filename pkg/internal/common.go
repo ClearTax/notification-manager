@@ -15,6 +15,7 @@ const (
 type Template struct {
 	TmplName      string                        `json:"tmplName,omitempty"`
 	TitleTmplName string                        `json:"titleTmplName,omitempty"`
+	ColorTmplName string                        `json:"colorTmplName,omitempty"`
 	TmplType      string                        `json:"tmplType,omitempty"`
 	TmplText      *v2beta2.ConfigmapKeySelector `json:"tmplText,omitempty"`
 }
@@ -105,6 +106,7 @@ func (c *Common) Clone() *Common {
 			TitleTmplName: c.TitleTmplName,
 			TmplType:      c.TmplType,
 			TmplText:      c.TmplText,
+			ColorTmplName: c.ColorTmplName,
 		},
 	}
 }

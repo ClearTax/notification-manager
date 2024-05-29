@@ -2012,6 +2012,16 @@ func (in *SlackReceiver) DeepCopyInto(out *SlackReceiver) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.TitleTemplate != nil {
+		in, out := &in.TitleTemplate, &out.TitleTemplate
+		*out = new(string)
+		**out = **in
+	}
+	if in.ColorTemplate != nil {
+		in, out := &in.ColorTemplate, &out.ColorTemplate
+		*out = new(string)
+		**out = **in
+	}
 	if in.TmplText != nil {
 		in, out := &in.TmplText, &out.TmplText
 		*out = new(ConfigmapKeySelector)

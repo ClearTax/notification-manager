@@ -229,6 +229,10 @@ type SlackOptions struct {
 	// The name of the template to generate Slack message.
 	// If the global template is not set, it will use default.
 	Template string `json:"template,omitempty"`
+	// The name of the template to generate slack message title
+	TitleTemplate string `json:"titleTemplate,omitempty"`
+	// The name of the color template to display a richly-formatted message
+	ColorTemplate string `json:"colorTemplate,omitempty"`
 }
 
 type WebhookOptions struct {
