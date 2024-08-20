@@ -105,6 +105,15 @@ type SlackReceiver struct {
 	TmplText *ConfigmapKeySelector `json:"tmplText,omitempty"`
 }
 
+type PagetDutyReceiver struct {
+	// whether the receiver is enabled
+	Enabled *bool `json:"enabled,omitempty"`
+	// Selector to filter alerts.
+	AlertSelector *LabelSelector `json:"alertSelector,omitempty"`
+	// pagerduty routing key,
+	RoutingKey *string `json:"routingKey"`
+}
+
 // ServiceReference holds a reference to Service.legacy.k8s.io
 type ServiceReference struct {
 	// `namespace` is the namespace of the service.
@@ -341,16 +350,17 @@ type TelegramReceiver struct {
 
 // ReceiverSpec defines the desired state of Receiver
 type ReceiverSpec struct {
-	DingTalk *DingTalkReceiver `json:"dingtalk,omitempty"`
-	Email    *EmailReceiver    `json:"email,omitempty"`
-	Slack    *SlackReceiver    `json:"slack,omitempty"`
-	Webhook  *WebhookReceiver  `json:"webhook,omitempty"`
-	Wechat   *WechatReceiver   `json:"wechat,omitempty"`
-	Sms      *SmsReceiver      `json:"sms,omitempty"`
-	Pushover *PushoverReceiver `json:"pushover,omitempty"`
-	Feishu   *FeishuReceiver   `json:"feishu,omitempty"`
-	Discord  *DiscordReceiver  `json:"discord,omitempty"`
-	Telegram *TelegramReceiver `json:"telegram,omitempty"`
+	DingTalk  *DingTalkReceiver  `json:"dingtalk,omitempty"`
+	Email     *EmailReceiver     `json:"email,omitempty"`
+	Slack     *SlackReceiver     `json:"slack,omitempty"`
+	Webhook   *WebhookReceiver   `json:"webhook,omitempty"`
+	Wechat    *WechatReceiver    `json:"wechat,omitempty"`
+	Sms       *SmsReceiver       `json:"sms,omitempty"`
+	Pushover  *PushoverReceiver  `json:"pushover,omitempty"`
+	Feishu    *FeishuReceiver    `json:"feishu,omitempty"`
+	Discord   *DiscordReceiver   `json:"discord,omitempty"`
+	Telegram  *TelegramReceiver  `json:"telegram,omitempty"`
+	PagerDuty *PagetDutyReceiver `json:"pagerduty,omitempty"`
 }
 
 // ReceiverStatus defines the observed state of Receiver

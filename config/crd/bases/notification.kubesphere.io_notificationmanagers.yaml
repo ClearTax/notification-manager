@@ -1590,6 +1590,11 @@ spec:
                               type: string
                             type: array
                         type: object
+                      pagerduty:
+                        properties:
+                          routingKey:
+                            type: string
+                        type: object
                       pushover:
                         properties:
                           notificationTimeout:
@@ -1608,6 +1613,10 @@ spec:
                         type: object
                       slack:
                         properties:
+                          colorTemplate:
+                            description: The name of the color template to display
+                              a richly-formatted message
+                            type: string
                           notificationTimeout:
                             description: Notification Sending Timeout
                             format: int32
@@ -1616,6 +1625,10 @@ spec:
                             description: |-
                               The name of the template to generate Slack message.
                               If the global template is not set, it will use default.
+                            type: string
+                          titleTemplate:
+                            description: The name of the template to generate slack
+                              message title
                             type: string
                         type: object
                       sms:

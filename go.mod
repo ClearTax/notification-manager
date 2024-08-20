@@ -13,6 +13,7 @@ require (
 	github.com/emicklei/go-restful v2.16.0+incompatible
 	github.com/go-chi/chi v4.0.3+incompatible
 	github.com/go-kit/kit v0.9.0
+	github.com/go-kit/log v0.2.1
 	github.com/go-logr/logr v1.2.4
 	github.com/golang/glog v1.2.0
 	github.com/json-iterator/go v1.1.12
@@ -21,6 +22,7 @@ require (
 	github.com/mwitkow/go-conntrack v0.0.0-20190716064945-2f068394615f
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.27.10
+	github.com/prometheus/common v0.44.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
@@ -83,7 +85,6 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/client_golang v1.16.0 // indirect
 	github.com/prometheus/client_model v0.4.0 // indirect
-	github.com/prometheus/common v0.44.0 // indirect
 	github.com/prometheus/procfs v0.10.1 // indirect
 	github.com/tjfoc/gmsm v1.3.2 // indirect
 	go.uber.org/atomic v1.10.0 // indirect

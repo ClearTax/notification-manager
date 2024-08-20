@@ -235,6 +235,10 @@ type SlackOptions struct {
 	ColorTemplate string `json:"colorTemplate,omitempty"`
 }
 
+type PagerDutyOptions struct {
+	RoutingKey string `json:"routingKey,omitempty"`
+}
+
 type WebhookOptions struct {
 	// Notification Sending Timeout
 	NotificationTimeout *int32 `json:"notificationTimeout,omitempty"`
@@ -322,17 +326,18 @@ type TelegramOptions struct {
 }
 
 type Options struct {
-	Global   *GlobalOptions   `json:"global,omitempty"`
-	Email    *EmailOptions    `json:"email,omitempty"`
-	Wechat   *WechatOptions   `json:"wechat,omitempty"`
-	Slack    *SlackOptions    `json:"slack,omitempty"`
-	Webhook  *WebhookOptions  `json:"webhook,omitempty"`
-	DingTalk *DingTalkOptions `json:"dingtalk,omitempty"`
-	Sms      *SmsOptions      `json:"sms,omitempty"`
-	Pushover *PushoverOptions `json:"pushover,omitempty"`
-	Feishu   *FeishuOptions   `json:"feishu,omitempty"`
-	Discord  *DiscordOptions  `json:"discord,omitempty"`
-	Telegram *TelegramOptions `json:"telegram,omitempty"`
+	Global    *GlobalOptions    `json:"global,omitempty"`
+	Email     *EmailOptions     `json:"email,omitempty"`
+	Wechat    *WechatOptions    `json:"wechat,omitempty"`
+	Slack     *SlackOptions     `json:"slack,omitempty"`
+	Webhook   *WebhookOptions   `json:"webhook,omitempty"`
+	DingTalk  *DingTalkOptions  `json:"dingtalk,omitempty"`
+	Sms       *SmsOptions       `json:"sms,omitempty"`
+	Pushover  *PushoverOptions  `json:"pushover,omitempty"`
+	Feishu    *FeishuOptions    `json:"feishu,omitempty"`
+	Discord   *DiscordOptions   `json:"discord,omitempty"`
+	Telegram  *TelegramOptions  `json:"telegram,omitempty"`
+	PagerDuty *PagerDutyOptions `json:"pagerduty,omitempty"`
 }
 
 // NotificationManagerStatus defines the observed state of NotificationManager

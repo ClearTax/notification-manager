@@ -691,6 +691,59 @@ spec:
                     maxItems: 200
                     type: array
                 type: object
+              pagerduty:
+                properties:
+                  alertSelector:
+                    description: Selector to filter alerts.
+                    properties:
+                      matchExpressions:
+                        description: matchExpressions is a list of label selector
+                          requirements. The requirements are ANDed.
+                        items:
+                          properties:
+                            key:
+                              description: key is the label key that the selector
+                                applies to.
+                              type: string
+                            operator:
+                              description: |-
+                                operator represents a key's relationship to a set of values.
+                                Valid operators are In, NotIn, Exists and DoesNotExist.
+                              type: string
+                            regexValue:
+                              type: string
+                            values:
+                              description: |-
+                                values is an array of string values. If the operator is In or NotIn,
+                                the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                the values array must be empty. This array is replaced during a strategic
+                                merge patch.
+                              items:
+                                type: string
+                              type: array
+                          required:
+                          - key
+                          - operator
+                          type: object
+                        type: array
+                      matchLabels:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                          map is equivalent to an element of matchExpressions, whose key field is "key", the
+                          operator is "In", and the values array contains only "value". The requirements are ANDed.
+                        type: object
+                    type: object
+                  enabled:
+                    description: whether the receiver is enabled
+                    type: boolean
+                  routingKey:
+                    description: pagerduty routing key,
+                    type: string
+                required:
+                - routingKey
+                type: object
               pushover:
                 properties:
                   alertSelector:
@@ -893,6 +946,10 @@ spec:
                     items:
                       type: string
                     type: array
+                  colorTemplate:
+                    description: The name of the template to set the color in slack
+                      message.
+                    type: string
                   enabled:
                     description: whether the receiver is enabled
                     type: boolean
@@ -942,6 +999,9 @@ spec:
                     description: |-
                       The name of the template to generate notification.
                       If the global template is not set, it will use default.
+                    type: string
+                  titleTemplate:
+                    description: The name of the template to generate slack title.
                     type: string
                   tmplText:
                     description: Template file.
