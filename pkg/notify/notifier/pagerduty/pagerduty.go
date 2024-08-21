@@ -154,7 +154,7 @@ func (n *Notifier) Notify(ctx context.Context, data *template.Data) error {
 			return utils.Error(resp.Message)
 		}
 
-		level.Debug(n.logger).Log("msg", "PagerDutyNotifier: send message", "key", key, "type", eventType)
+		level.Debug(n.logger).Log("msg", "PagerDutyNotifier: send message", "key", key, "type", eventType, labelSet.String())
 		return nil
 	}
 
@@ -192,8 +192,8 @@ func truncateInRunes(s string, n int) (string, bool) {
 
 func convertKVToCommonLabelSet(cls template.KV) model.LabelSet {
 	mls := make(model.LabelSet, len(cls))
-	for _, s := range cls.SortedPairs() {
-		mls[model.LabelName(s.Name)] = model.LabelValue(s.Value)
+	for _, l := range cls.SortedPairs() {
+		mls[model.LabelName(l.Name)] = model.LabelValue(l.Value)
 	}
 	return mls
 }
