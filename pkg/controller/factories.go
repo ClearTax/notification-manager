@@ -10,6 +10,7 @@ import (
 	"github.com/kubesphere/notification-manager/pkg/internal/discord"
 	"github.com/kubesphere/notification-manager/pkg/internal/email"
 	"github.com/kubesphere/notification-manager/pkg/internal/feishu"
+	"github.com/kubesphere/notification-manager/pkg/internal/pagerduty"
 	"github.com/kubesphere/notification-manager/pkg/internal/pushover"
 	"github.com/kubesphere/notification-manager/pkg/internal/slack"
 	"github.com/kubesphere/notification-manager/pkg/internal/sms"
@@ -38,6 +39,7 @@ func init() {
 	receiverFactories[constants.WeChat] = wechat.NewReceiver
 	receiverFactories[constants.Discord] = discord.NewReceiver
 	receiverFactories[constants.Telegram] = telegram.NewReceiver
+	receiverFactories[constants.PagerDuty] = pagerduty.NewReceiver
 
 	configFactories = make(map[string]configFactory)
 	configFactories[constants.DingTalk] = dingtalk.NewConfig
@@ -50,6 +52,7 @@ func init() {
 	configFactories[constants.WeChat] = wechat.NewConfig
 	configFactories[constants.Discord] = discord.NewConfig
 	configFactories[constants.Telegram] = telegram.NewConfig
+	configFactories[constants.PagerDuty] = pagerduty.NewConfig
 }
 
 func NewReceivers(tenantID string, obj *v2beta2.Receiver) map[string]internal.Receiver {

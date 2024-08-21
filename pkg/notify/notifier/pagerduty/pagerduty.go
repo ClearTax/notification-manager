@@ -3,11 +3,14 @@ package pagerduty
 import (
 	"bytes"
 	"context"
+	"fmt"
+	"io"
 	"net/http"
 	"time"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/log/level"
+	"github.com/kubesphere/notification-manager/pkg/async"
 	"github.com/kubesphere/notification-manager/pkg/controller"
 	"github.com/kubesphere/notification-manager/pkg/internal"
 	"github.com/kubesphere/notification-manager/pkg/internal/pagerduty"
@@ -20,8 +23,7 @@ import (
 const (
 	DefaultSendTimeout = time.Second * 5
 
-	maxEventSize       int = 512000
-	maxSummaryLenRunes     = 1024
+	maxSummaryLenRunes = 1024
 
 	truncationMarker = "…"
 
@@ -66,7 +68,6 @@ type Notifier struct {
 	receiver    *pagerduty.Receiver
 	timeout     time.Duration
 	logger      log.Logger
-	routingKey  string
 
 	sentSuccessfulHandler *func([]*template.Alert)
 }
@@ -78,77 +79,98 @@ func NewPagerDutyNotifier(logger log.Logger, receiver internal.Receiver, notifie
 		logger:      logger,
 	}
 
+	n.receiver = receiver.(*pagerduty.Receiver)
+
 	opts := notifierCtl.ReceiverOpts
 	if opts != nil && opts.PagerDuty != nil {
 		if opts.PagerDuty.RoutingKey != "" {
-			n.routingKey = opts.PagerDuty.RoutingKey
+			n.receiver.RoutingKey = opts.PagerDuty.RoutingKey
 		}
 	}
-	n.receiver = receiver.(*pagerduty.Receiver)
 
 	return n, nil
 }
 
 func (n *Notifier) Notify(ctx context.Context, data *template.Data) error {
-	alert := data.Alerts[0]
+	send := func(alert *template.Alert) error {
+		labelSet := convertKVToCommonLabelSet(alert.Labels)
+		key := labelSet.Fingerprint()
 
-	labelSet := convertKVToCommonLabelSet(data.GroupLabels)
-	key := labelSet.Fingerprint()
+		start := time.Now()
+		defer func() {
+			_ = level.Debug(n.logger).Log("msg", "PagerDutyNotifier: send message", "key", key, "used", time.Since(start).String())
+		}()
 
-	summary, truncated := truncateInRunes(alert.Annotations[alertSummaryKey], maxSummaryLenRunes)
-	if truncated {
-		level.Warn(n.logger).Log("msg", "Truncated summary", "key", key, "max_runes", maxSummaryLenRunes)
+		summary, truncated := truncateInRunes(alert.Annotations[alertSummaryKey], maxSummaryLenRunes)
+		if truncated {
+			level.Warn(n.logger).Log("msg", "PagerDutyNotifier: Truncated summary", "key", key, "max_runes", maxSummaryLenRunes)
+		}
+
+		var eventType = pagerDutyEventTrigger
+		if model.AlertStatus(alert.Status) == model.AlertResolved {
+			eventType = pagerDutyEventResolve
+		}
+
+		routingKey := n.receiver.RoutingKey
+
+		msg := &pagerDutyMessage{
+			RoutingKey:  routingKey,
+			EventAction: eventType,
+			DedupKey:    key.String(),
+			Details:     alert.Labels,
+			Payload: &pagerDutyPayload{
+				Summary:       summary,
+				Source:        data.CommonLabels["alertname"],
+				Severity:      alert.Labels["severity"],
+				CustomDetails: alert.Labels,
+			},
+		}
+
+		var buf bytes.Buffer
+		if err := utils.JsonEncode(&buf, msg); err != nil {
+			level.Error(n.logger).Log("msg", "PagerDutyNotifier: encode message error", "key", key, "error", err.Error())
+			return err
+		}
+
+		request, err := http.NewRequest(http.MethodPost, pagerDutyEventURL, &buf)
+		if err != nil {
+			return err
+		}
+
+		body, err := DoHttpRequest(ctx, nil, request.WithContext(ctx))
+		if err != nil {
+			level.Error(n.logger).Log("msg", "PagerDutyNotifier: do http error", "key", key, "error", err)
+			return err
+		}
+
+		var resp pagerDutyResponse
+		if err := utils.JsonUnmarshal(body, &resp); err != nil {
+			level.Error(n.logger).Log("msg", "PagerDutyNotifier: decode response body error", "key", key, "error", err)
+			return err
+		}
+
+		if resp.Status != "success" {
+			level.Error(n.logger).Log("msg", "PagerDutyNotifier: send message error", "key", key, resp.Message)
+			return utils.Error(resp.Message)
+		}
+
+		level.Debug(n.logger).Log("msg", "PagerDutyNotifier: send message", "key", key, "type", eventType)
+		return nil
 	}
 
-	var eventType = pagerDutyEventTrigger
-	if model.AlertStatus(data.Status()) == model.AlertResolved {
-		eventType = pagerDutyEventResolve
+	group := async.NewGroup(ctx)
+	for _, alert := range data.Alerts {
+		group.Add(func(stopCh chan interface{}) {
+			err := send(alert)
+			if err == nil {
+				if n.sentSuccessfulHandler != nil {
+					(*n.sentSuccessfulHandler)(data.Alerts)
+				}
+			}
+			stopCh <- err
+		})
 	}
-
-	msg := &pagerDutyMessage{
-		RoutingKey:  n.routingKey,
-		EventAction: eventType,
-		DedupKey:    key.String(),
-		Details:     data.CommonLabels,
-		Payload: &pagerDutyPayload{
-			Summary:       summary,
-			Source:        data.CommonLabels["alertname"],
-			Severity:      alert.Labels["severity"],
-			CustomDetails: alert.Labels,
-		},
-	}
-
-	var buf bytes.Buffer
-	if err := utils.JsonEncode(&buf, msg); err != nil {
-		level.Error(n.logger).Log("msg", "PagerDutyNotifier: encode message error", "routingKey", n.routingKey, "error", err.Error())
-		return err
-	}
-
-	request, err := http.NewRequest(http.MethodPost, pagerDutyEventURL, &buf)
-	if err != nil {
-		return err
-	}
-
-	body, err := utils.DoHttpRequest(ctx, nil, request.WithContext(ctx))
-	if err != nil {
-		_ = level.Error(n.logger).Log("msg", "PagerDutyNotifier: do http error", "routingKey", n.routingKey, "error", err)
-		return err
-	}
-
-	var resp pagerDutyResponse
-	if err := utils.JsonUnmarshal(body, &resp); err != nil {
-		_ = level.Error(n.logger).Log("msg", "PagerDutyNotifier: decode response body error", "routingKey", n.routingKey, "error", err)
-		return err
-	}
-
-	if resp.Status != "success" {
-		level.Error(n.logger).Log("msg", "PagerDutyNotifier: send message error", "routingKey", n.routingKey, "error", resp.Message)
-		return utils.Error(resp.Message)
-	}
-
-	level.Debug(n.logger).Log("msg", "PagerDutyNotifier: send message", "routingKey", n.routingKey)
-
-	return nil
+	return group.Wait()
 }
 
 func (n *Notifier) SetSentSuccessfulHandler(h *func([]*template.Alert)) {
@@ -170,8 +192,40 @@ func truncateInRunes(s string, n int) (string, bool) {
 
 func convertKVToCommonLabelSet(cls template.KV) model.LabelSet {
 	mls := make(model.LabelSet, len(cls))
-	for ln, lv := range cls {
-		mls[model.LabelName(ln)] = model.LabelValue(lv)
+	for _, s := range cls.SortedPairs() {
+		mls[model.LabelName(s.Name)] = model.LabelValue(s.Value)
 	}
 	return mls
+}
+
+func DoHttpRequest(ctx context.Context, client *http.Client, request *http.Request) ([]byte, error) {
+
+	if client == nil {
+		client = &http.Client{}
+	}
+
+	resp, err := client.Do(request.WithContext(ctx))
+	if err != nil {
+		return nil, err
+	}
+
+	defer func() {
+		_, _ = io.Copy(io.Discard, resp.Body)
+		_ = resp.Body.Close()
+	}()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusAccepted {
+		msg := ""
+		if len(body) > 0 {
+			msg = string(body)
+		}
+		return body, fmt.Errorf("%d, %s", resp.StatusCode, msg)
+	}
+
+	return body, nil
 }
